@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SYNTHWAVE // INFINITE DRIFT</title>
+<style>
+  :root {
+    --neon-magenta: #ff2bd6;
+    --neon-cyan:    #05f0ff;
+    --neon-pink:    #ff5fb3;
+    --sun-core:     #fff3a3;
+    --sun-mid:      #ff8a3c;
+    --sun-edge:     #d61d4f;
+    --sky-top:      #0a0420;
+    --sky-mid:      #2a0a4a;
+    --sky-horizon:  #5e1654;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #050010;
+    font-family: 'Courier New', ui-monospace, monospace;
+    color: var(--neon-pink);
+    -webkit-font-smoothing: antialiased;
+  }
+  canvas { display: block; }
+  #c { position: fixed; inset: 0; }
+
+  /* HUD chrome */
+  .hud {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10;
+    color: var(--neon-magenta);
+    text-shadow:
+      0 0 4px rgba(255, 43, 214, 0.9),
+      0 0 12px rgba(255, 43, 214, 0.5);
+    letter-spacing: 0.18em;
+    font-size: 12px;
+    font-weight: 700;
+    user-select: none;
+  }
+  .hud.tl { top: 18px; left: 22px; }
+  .hud.tr { top: 18px; right: 22px; text-align: right; }
+  .hud.bl { bottom: 18px; left: 22px; }
+  .hud.br { bottom: 18px; right: 22px; text-align: right; }
+  .hud.bc { bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+  .hud.cc {
+    bottom: 64px; left: 50%; transform: translateX(-50%);
+    text-align: center; line-height: 1.7;
+    padding: 12px 22px;
+    border: 1px solid rgba(255, 43, 214, 0.35);
+    background: rgba(8, 2, 22, 0.55);
+    backdrop-filter: blur(6px);
+    transition: opacity 0.8s ease;
+  }
+  .hud.cc.hidden { opacity: 0; pointer-events: none; }
+  .ctitle { color: var(--neon-cyan); text-shadow: 0 0 6px var(--neon-cyan); letter-spacing: 0.3em; font-size: 11px; margin-bottom: 6px; }
+  .crow { font-size: 12px; letter-spacing: 0.12em; }
+  .crow .k {
+    display: inline-block; min-width: 38px; padding: 1px 6px;
+    border: 1px solid rgba(5, 240, 255, 0.6);
+    color: var(--neon-cyan);
+    text-shadow: 0 0 4px var(--neon-cyan);
+    margin-right: 4px;
+    background: rgba(5, 240, 255, 0.05);
+  }
+
+  .chip {
+    display: inline-block;
+    padding: 3px 10px;
+    border: 1px solid rgba(255, 43, 214, 0.5);
+    background: rgba(8, 2, 22, 0.55);
+    font-size: 10px; letter-spacing: 0.2em;
+    color: var(--neon-pink);
+    text-shadow: 0 0 4px var(--neon-pink);
+    transition: color 0.3s, border-color 0.3s, text-shadow 0.3s;
+  }
+  .chip.warn {
+    color: #ffd84a;
+    border-color: rgba(255, 216, 74, 0.7);
+    text-shadow: 0 0 6px #ffd84a;
+  }
+  .chip.on {
+    color: var(--neon-cyan);
+    border-color: rgba(5, 240, 255, 0.7);
+    text-shadow: 0 0 6px var(--neon-cyan);
+  }
+
+  .hud .row { display: flex; gap: 14px; align-items: baseline; }
+  .hud .big {
+    font-size: 22px;
+    color: var(--neon-cyan);
+    text-shadow:
+      0 0 6px rgba(5, 240, 255, 0.9),
+      0 0 18px rgba(5, 240, 255, 0.4);
+  }
+  .hud .bar {
+    display: inline-block;
+    width: 130px;
+    height: 6px;
+    background: linear-gradient(90deg, rgba(255,43,214,.15), rgba(255,43,214,.15));
+    border: 1px solid rgba(255,43,214,.6);
+    box-shadow: 0 0 6px rgba(255,43,214,.5) inset;
+    position: relative;
+  }
+  .hud .bar::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, var(--neon-magenta), var(--neon-cyan));
+    width: 62%;
+    box-shadow: 0 0 10px var(--neon-magenta);
+  }
+
+  /* corner brackets — pure decoration */
+  .bracket {
+    position: fixed; width: 28px; height: 28px;
+    border: 1px solid rgba(255, 43, 214, 0.55);
+    z-index: 9; pointer-events: none;
+    box-shadow: 0 0 8px rgba(255,43,214,.35);
+  }
+  .bracket.tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+  .bracket.tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+  .bracket.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+  .bracket.br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+
+  /* scanlines overlay — subtle */
+  .scan {
+    position: fixed; inset: 0; z-index: 5; pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0)   0px,
+      rgba(0,0,0,0)   2px,
+      rgba(0,0,0,0.18) 3px,
+      rgba(0,0,0,0)   4px
+    );
+    mix-blend-mode: multiply;
+    opacity: 0.55;
+  }
+
+  /* vignette */
+  .vignette {
+    position: fixed; inset: 0; z-index: 6; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.7) 100%);
+  }
+
+  /* boot splash */
+  #boot {
+    position: fixed; inset: 0; z-index: 100;
+    background: #050010;
+    display: grid; place-items: center;
+    color: var(--neon-cyan);
+    font-size: 14px; letter-spacing: 0.3em;
+    transition: opacity 0.8s ease;
+    /* CSS-only safety net: even if JS is disabled or fails, the boot fades out after 3.5s */
+    animation: bootAutoHide 3.5s ease-out forwards;
+  }
+  #boot.gone { opacity: 0 !important; pointer-events: none; }
+  #boot .blink { animation: bl 1s steps(2, end) infinite; }
+  @keyframes bl { 50% { opacity: 0; } }
+  @keyframes bootAutoHide {
+    0%, 80%   { opacity: 1; visibility: visible; }
+    100%      { opacity: 0; visibility: hidden; pointer-events: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="bracket tl"></div>
+  <div class="bracket tr"></div>
+  <div class="bracket bl"></div>
+  <div class="bracket br"></div>
+  <div class="scan"></div>
+  <div class="vignette"></div>
+
+  <div class="hud tl">
+    <div class="row"><span class="big">SYNTHWAVE</span><span>// CH.01</span></div>
+    <div>INFINITE&nbsp;DRIFT&nbsp;PROTOCOL</div>
+    <div style="opacity:.7;margin-top:6px;">1986 / NEON HORIZON</div>
+  </div>
+
+  <div class="hud tr">
+    <div class="row" style="justify-content:flex-end;"><span>SUN&nbsp;DECAY</span></div>
+    <div class="bar"></div>
+    <div style="opacity:.7;margin-top:6px;">T+∞&nbsp;:&nbsp;DRIFTING</div>
+  </div>
+
+  <div class="hud bl">
+    <div>TERRAIN&nbsp;:&nbsp;SIMPLEX&nbsp;3D</div>
+    <div>GRID&nbsp;&nbsp;&nbsp;:&nbsp;120&times;120</div>
+    <div style="opacity:.7;margin-top:6px;">SCROLL&nbsp;OFFSET&nbsp;<span id="off">0</span></div>
+  </div>
+
+  <div class="hud br">
+    <div class="row" style="justify-content:flex-end;"><span>VELOCITY</span></div>
+    <div class="big" id="vel">022.0</div>
+    <div style="opacity:.7;margin-top:6px;">KM / S · x<span id="mul">1.00</span></div>
+  </div>
+
+  <div class="hud bc" id="status">
+    <span class="chip" id="chip-pal">PAL · CLASSIC</span>
+    <span class="chip" id="chip-st">RUN</span>
+    <span class="chip" id="chip-fs">FS · OFF</span>
+  </div>
+
+  <div class="hud cc" id="ctrls">
+    <div class="ctitle">▌ DRIFT CONSOLE ▐</div>
+    <div class="crow"><span class="k">W/S</span> SPEED&nbsp;&nbsp;<span class="k">A/D</span> STEER&nbsp;&nbsp;<span class="k">SPACE</span> PAUSE</div>
+    <div class="crow"><span class="k">1·2·3</span> PALETTE&nbsp;&nbsp;<span class="k">MOUSE</span> LOOK&nbsp;&nbsp;<span class="k">F</span> FULL&nbsp;&nbsp;<span class="k">P</span> SHOT&nbsp;&nbsp;<span class="k">H</span> HIDE</div>
+  </div>
+
+  <div id="boot"><div><span class="blink">▌ BOOTING NEON CORE ▐</span></div></div>
+  <div id="errbox" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);max-width:80%;padding:24px 32px;background:rgba(20,5,40,0.92);border:1px solid #ff2bd6;color:#ff2bd6;font:13px/1.5 ui-monospace,monospace;z-index:200;text-shadow:0 0 6px #ff2bd6;letter-spacing:0.05em;border-radius:4px;"></div>
+
+  <canvas id="c"></canvas>
+
+  <!-- Global error trap: show any failure in a visible overlay so the user can diagnose -->
+  <script>
+    window.addEventListener('error', function (e) {
+      var box = document.getElementById('errbox');
+      if (box) {
+        box.style.display = 'block';
+        box.innerHTML = '<b style="color:#ff5fb3">▌ SYNTHWAVE ENGINE ERROR ▐</b><br><br>'
+          + (e.message || String(e.error || e))
+          + (e.filename ? '<br><span style="opacity:.6">@ ' + e.filename + ':' + e.lineno + '</span>' : '');
+      }
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var box = document.getElementById('errbox');
+      if (box) {
+        box.style.display = 'block';
+        box.innerHTML = '<b style="color:#ff5fb3">▌ SYNTHWAVE ENGINE ERROR ▐</b><br><br>'
+          + (e.reason && e.reason.message ? e.reason.message : String(e.reason));
+      }
+    });
+  </script>
+
+  <!-- Three.js as UMD bundle (regular <script>, no ES modules / importmap needed) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+  <!-- Inlined simplex 3D noise (Stefan Gustavson, MIT). ~3KB, no CDN dependency. -->
+  <script>
+    function createNoise3D(rng) {
+      rng = rng || Math.random;
+      var grad3 = [
+        [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+        [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+        [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+      ];
+      var p = new Uint8Array(256);
+      for (var i = 0; i < 256; i++) p[i] = i;
+      // Fisher–Yates shuffle with provided rng for reproducible terrain
+      for (var i = 255; i > 0; i--) {
+        var j = Math.floor(rng() * (i + 1));
+        var t = p[i]; p[i] = p[j]; p[j] = t;
+      }
+      var perm = new Uint8Array(512);
+      var permMod12 = new Uint8Array(512);
+      for (var i = 0; i < 512; i++) {
+        perm[i] = p[i & 255];
+        permMod12[i] = perm[i] % 12;
+      }
+      var F3 = 1 / 3, G3 = 1 / 6;
+      return function (xin, yin, zin) {
+        var s = (xin + yin + zin) * F3;
+        var i = Math.floor(xin + s), j = Math.floor(yin + s), k = Math.floor(zin + s);
+        var t = (i + j + k) * G3;
+        var X0 = i - t, Y0 = j - t, Z0 = k - t;
+        var x0 = xin - X0, y0 = yin - Y0, z0 = zin - Z0;
+        var i1, j1, k1, i2, j2, k2;
+        if (x0 >= y0) {
+          if      (y0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+          else if (x0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1; }
+          else               { i1 = 0; j1 = 0; k1 = 1; i2 = 1; j2 = 0; k2 = 1; }
+        } else {
+          if      (y0 < z0)  { i1 = 0; j1 = 0; k1 = 1; i2 = 0; j2 = 1; k2 = 1; }
+          else if (x0 < z0)  { i1 = 0; j1 = 1; k1 = 0; i2 = 0; j2 = 1; k2 = 1; }
+          else               { i1 = 0; j1 = 1; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+        }
+        var x1 = x0 - i1 + G3,    y1 = y0 - j1 + G3,    z1 = z0 - k1 + G3;
+        var x2 = x0 - i2 + 2 * G3, y2 = y0 - j2 + 2 * G3, z2 = z0 - k2 + 2 * G3;
+        var x3 = x0 - 1 + 3 * G3,  y3 = y0 - 1 + 3 * G3,  z3 = z0 - 1 + 3 * G3;
+        var ii = i & 255, jj = j & 255, kk = k & 255;
+        var gi0 = permMod12[ii + perm[jj + perm[kk]]];
+        var gi1 = permMod12[ii + i1 + perm[jj + j1 + perm[kk + k1]]];
+        var gi2 = permMod12[ii + i2 + perm[jj + j2 + perm[kk + k2]]];
+        var gi3 = permMod12[ii + 1 + perm[jj + 1 + perm[kk + 1]]];
+        var n0 = 0, n1 = 0, n2 = 0, n3 = 0;
+        var t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
+        if (t0 > 0) { t0 *= t0; n0 = t0 * t0 * (grad3[gi0][0] * x0 + grad3[gi0][1] * y0 + grad3[gi0][2] * z0); }
+        var t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
+        if (t1 > 0) { t1 *= t1; n1 = t1 * t1 * (grad3[gi1][0] * x1 + grad3[gi1][1] * y1 + grad3[gi1][2] * z1); }
+        var t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
+        if (t2 > 0) { t2 *= t2; n2 = t2 * t2 * (grad3[gi2][0] * x2 + grad3[gi2][1] * y2 + grad3[gi2][2] * z2); }
+        var t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
+        if (t3 > 0) { t3 *= t3; n3 = t3 * t3 * (grad3[gi3][0] * x3 + grad3[gi3][1] * y3 + grad3[gi3][2] * z3); }
+        return 32 * (n0 + n1 + n2 + n3);
+      };
+    }
+  </script>
+
+  <script>
+  /* ============================================================
+     SYNTHWAVE TERRAIN — main scene (no ES modules, no importmap)
+     Three.js loads as UMD from CDN; simplex-noise inlined above.
+     Renders directly with renderer.render() — no postprocessing.
+     ============================================================ */
+  (function () {
+    if (typeof THREE === 'undefined') {
+      var box = document.getElementById('errbox');
+      if (box) { box.style.display = 'block'; box.innerHTML = '<b style="color:#ff5fb3">▌ THREE.JS FAILED TO LOAD ▐</b><br><br>Could not load three.js from CDN.<br>Check your network connection.'; }
+      return;
+    }
+
+    /* ---------- deterministic PRNG (mulberry32) so the first frame is reproducible ---------- */
+    function mulberry32(a) {
+      return function() {
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        let t = a;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+    const rng = mulberry32(1986);
+    const noise3D = createNoise3D(rng);
+
+    /* ---------- renderer + scene ---------- */
+    const canvas = document.getElementById('c');
+    const renderer = new THREE.WebGLRenderer({
+      canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.95;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x1a0628, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(
+      72, window.innerWidth / window.innerHeight, 0.1, 3000
+    );
+    camera.position.set(0, 9.0, 36);
+    camera.lookAt(0, 6, 0);
+
+    /* ---------- sky dome (vertical gradient, drawn on a huge inverted sphere) ---------- */
+    {
+      const skyGeo = new THREE.SphereGeometry(1500, 32, 16);
+      const skyMat = new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        uniforms: {
+          uTop:     { value: new THREE.Color('#08001c') },
+          uMid:     { value: new THREE.Color('#2a0a4a') },
+          uHorizon: { value: new THREE.Color('#5e1654') },
+          uSunGlow: { value: new THREE.Color('#ff3a7a') },
+          uSunDir:  { value: new THREE.Vector3(0, 0.18, -1).normalize() },
+          uSunIntensity: { value: 0.28 }
+        },
+        vertexShader: /* glsl */`
+          varying vec3 vWorld;
+          void main() {
+            vec4 wp = modelMatrix * vec4(position, 1.0);
+            vWorld = wp.xyz;
+            gl_Position = projectionMatrix * viewMatrix * wp;
+          }
+        `,
+        fragmentShader: /* glsl */`
+          varying vec3 vWorld;
+          uniform vec3 uTop, uMid, uHorizon, uSunGlow;
+          uniform vec3 uSunDir;
+          uniform float uSunIntensity;
+
+          void main() {
+            vec3 dir = normalize(vWorld);
+            float h = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
+
+            // 3-stop vertical gradient
+            vec3 sky;
+            if (h > 0.55) {
+              float t = smoothstep(0.55, 1.0, h);
+              sky = mix(uMid, uTop, t);
+            } else {
+              float t = smoothstep(0.0, 0.55, h);
+              sky = mix(uHorizon, uMid, t);
+            }
+
+            // horizon glow biased toward sun azimuth
+            float horizonBand = 1.0 - smoothstep(0.0, 0.35, abs(h - 0.42));
+            float sunAz = max(dot(normalize(vec3(dir.x, 0.0, dir.z)), normalize(vec3(uSunDir.x, 0.0, uSunDir.z))), 0.0);
+            sky += uSunGlow * horizonBand * pow(sunAz, 2.0) * uSunIntensity;
+
+            gl_FragColor = vec4(sky, 1.0);
+          }
+        `
+      });
+      const sky = new THREE.Mesh(skyGeo, skyMat);
+      sky.renderOrder = -10;
+      scene.add(sky);
+      window.__skyMat = skyMat;
+    }
+
+    /* ---------- stars (Points, with twinkle) ---------- */
+    {
+      const N = 1800;
+      const positions = new Float32Array(N * 3);
+      const phases = new Float32Array(N);
+      const sizes = new Float32Array(N);
+      for (let i = 0; i < N; i++) {
+        // hemisphere above horizon, biased upward
+        const u = rng();
+        const v = rng() * 0.55 + 0.05; // 0.05..0.6 — mostly upper hemisphere
+        const theta = u * Math.PI * 2;
+        const phi = Math.acos(1 - v * 1.6); // weight toward upper sky
+        const r = 1200;
+        positions[i*3+0] = r * Math.sin(phi) * Math.cos(theta);
+        positions[i*3+1] = r * Math.cos(phi) * 0.7 + 80; // raise them up
+        positions[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+        phases[i] = rng() * Math.PI * 2;
+        sizes[i] = 0.6 + rng() * 2.2;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      g.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
+      g.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+
+      const m = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: { uTime: { value: 0 } },
+        vertexShader: /* glsl */`
+          attribute float aPhase;
+          attribute float aSize;
+          varying float vTwinkle;
+          uniform float uTime;
+          void main() {
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            float dist = -mv.z;
+            gl_Position = projectionMatrix * mv;
+            vTwinkle = 0.55 + 0.45 * sin(uTime * 1.4 + aPhase * 7.0);
+            gl_PointSize = aSize * (380.0 / dist);
+          }
+        `,
+        fragmentShader: /* glsl */`
+          varying float vTwinkle;
+          void main() {
+            vec2 c = gl_PointCoord - 0.5;
+            float d = length(c);
+            float a = smoothstep(0.5, 0.0, d);
+            // tint: most white, some pink
+            vec3 col = mix(vec3(1.0, 0.85, 0.95), vec3(1.0), step(0.5, fract(vTwinkle * 13.0)));
+            gl_FragColor = vec4(col, a * vTwinkle);
+          }
+        `
+      });
+      const stars = new THREE.Points(g, m);
+      stars.renderOrder = -8;
+      scene.add(stars);
+      stars.userData.mat = m;
+      window.__stars = stars;
+    }
+
+    /* ---------- mountains silhouette (jagged dark band at horizon) ---------- */
+    {
+      const W = 1200, SEG = 220;
+      const pts = [];
+      for (let i = 0; i <= SEG; i++) {
+        const x = -W/2 + (i / SEG) * W;
+        const h =
+          Math.abs(noise3D(x * 0.012, 0.0, 0.0)) * 14 +
+          Math.abs(noise3D(x * 0.05,  5.2, 0.0)) * 6 +
+          Math.abs(noise3D(x * 0.18,  9.1, 0.0)) * 2.5;
+        pts.push(new THREE.Vector3(x, 0, -380));
+        pts.push(new THREE.Vector3(x, 1.5 + h, -380));
+      }
+      const g = new THREE.BufferGeometry();
+      g.setFromPoints(pts);
+      const m = new THREE.LineBasicMaterial({
+        color: 0x14022a,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false
+      });
+      // build a filled silhouette via ShapeGeometry for proper mass
+      const shape = new THREE.Shape();
+      shape.moveTo(-W/2, -50);
+      for (let i = 0; i <= SEG; i++) {
+        const x = -W/2 + (i / SEG) * W;
+        const h =
+          Math.abs(noise3D(x * 0.012, 0.0, 0.0)) * 14 +
+          Math.abs(noise3D(x * 0.05,  5.2, 0.0)) * 6 +
+          Math.abs(noise3D(x * 0.18,  9.1, 0.0)) * 2.5;
+        shape.lineTo(x, 1.5 + h);
+      }
+      shape.lineTo(W/2, -50);
+      shape.lineTo(-W/2, -50);
+      const fill = new THREE.ShapeGeometry(shape);
+      const fillMat = new THREE.MeshBasicMaterial({
+        color: 0x0c0118,
+        transparent: true,
+        opacity: 0.9,
+        depthWrite: false
+      });
+      const fillMesh = new THREE.Mesh(fill, fillMat);
+      fillMesh.position.z = -380;
+      scene.add(fillMesh);
+    }
+
+    /* ---------- SUN ---------- */
+    // sun group will be slowly lowered over time
+    const sunGroup = new THREE.Group();
+    scene.add(sunGroup);
+
+    // the sun disc itself (uses a 2D plane facing camera)
+    const SUN = {
+      // world-space direction we treat as the sun's position vector
+      // we'll build the sun far away and billboard it to face the camera
+    };
+
+    {
+      // halo — large soft radial gradient behind the sun
+      const haloGeo = new THREE.PlaneGeometry(360, 360);
+      const haloMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          uColor: { value: new THREE.Color('#ff2a6d') },
+        },
+        vertexShader: /* glsl */`
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: /* glsl */`
+          varying vec2 vUv;
+          uniform vec3 uColor;
+          void main() {
+            vec2 c = vUv - 0.5;
+            float d = length(c) * 2.0;
+            float a = pow(1.0 - clamp(d, 0.0, 1.0), 2.2);
+            gl_FragColor = vec4(uColor, a * 0.85);
+          }
+        `
+      });
+      const halo = new THREE.Mesh(haloGeo, haloMat);
+      halo.position.set(0, 22, -540);
+      sunGroup.add(halo);
+      window.__halo1Mat = haloMat;
+
+      // inner brighter halo
+      const halo2Mat = haloMat.clone();
+      halo2Mat.uniforms = {
+        uColor: { value: new THREE.Color('#ff9a3c') }
+      };
+      const halo2 = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), halo2Mat);
+      halo2.position.set(0, 22, -538);
+      sunGroup.add(halo2);
+      window.__halo2Mat = halo2Mat;
+
+      // the disc — radial gradient with horizontal stripes
+      const discGeo = new THREE.PlaneGeometry(140, 140);
+      const discMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.NormalBlending,
+        uniforms: {
+          uCore: { value: new THREE.Color('#fff3a3') },
+          uMid:  { value: new THREE.Color('#ff8a3c') },
+          uEdge: { value: new THREE.Color('#d61d4f') },
+          uTime: { value: 0 }
+        },
+        vertexShader: /* glsl */`
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: /* glsl */`
+          varying vec2 vUv;
+          uniform vec3 uCore, uMid, uEdge;
+          uniform float uTime;
+
+          void main() {
+            vec2 c = (vUv - 0.5) * 2.0;
+            float d = length(c);
+            if (d > 1.0) discard;
+
+            // soft radial falloff
+            float t = d;             // 0 center -> 1 edge
+            vec3 col;
+            if (t < 0.45) {
+              col = mix(uCore, uMid, smoothstep(0.0, 0.45, t));
+            } else {
+              col = mix(uMid, uEdge, smoothstep(0.45, 1.0, t));
+            }
+
+            // overall alpha — fade a touch at the very edge
+            float a = 1.0 - smoothstep(0.93, 1.0, t);
+
+            // === ICONIC HORIZONTAL STRIPES ===
+            // uv.y in [0,1]; sun is centered at 0.5.
+            // We want thin black bars across the lower 35% of the sun.
+            float yFromCenter = abs(c.y); // 0 at center, 1 at top/bottom
+            if (yFromCenter > 0.18 && yFromCenter < 0.78) {
+              // 7 stripes that get thinner / fade as they go further from the equator
+              float band = yFromCenter * 11.0;
+              float fr = fract(band);
+              float fade = smoothstep(0.78, 0.18, yFromCenter); // strongest near middle
+              float stripeMask = step(0.45, fr) * fade;
+              a *= mix(1.0, stripeMask, 0.95);
+            }
+
+            // subtle inner glow boost
+            col += vec3(0.05, 0.02, 0.0) * (1.0 - t);
+
+            gl_FragColor = vec4(col, a);
+          }
+        `
+      });
+      const disc = new THREE.Mesh(discGeo, discMat);
+      disc.position.set(0, 22, -536);
+      disc.userData.billboard = true;
+      sunGroup.add(disc);
+      window.__sunDisc = disc;
+      window.__sunDiscMat = discMat;
+    }
+
+    // bottom-of-horizon red glow strip (atmospheric scattering feel)
+    {
+      const stripGeo = new THREE.PlaneGeometry(2400, 70);
+      const stripMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: { uCol: { value: new THREE.Color('#ff3a5e') } },
+        vertexShader: /* glsl */`
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: /* glsl */`
+          varying vec2 vUv;
+          uniform vec3 uCol;
+          void main() {
+            float horiz = pow(1.0 - abs(vUv.y - 0.55) * 2.4, 1.4);
+            float a = clamp(horiz, 0.0, 1.0);
+            gl_FragColor = vec4(uCol, a * 0.32);
+          }
+        `
+      });
+      const strip = new THREE.Mesh(stripGeo, stripMat);
+      strip.position.set(0, 6, -540);
+      scene.add(strip);
+      window.__stripMat = stripMat;
+    }
+
+    /* ---------- the LOWER flat grid plane (anti-aliased grid via fwidth) ---------- */
+    {
+      const SIZE = 1400, DIV = 140;
+      const geo = new THREE.PlaneGeometry(SIZE, SIZE, 1, 1);
+      geo.rotateX(-Math.PI / 2);
+
+      const mat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        uniforms: {
+          uTime: { value: 0 },
+          uScroll: { value: 0 },
+          uColorA: { value: new THREE.Color('#ff2bd6') },
+          uColorB: { value: new THREE.Color('#05f0ff') },
+          uFog:    { value: new THREE.Color('#3a0e54') }
+        },
+        vertexShader: /* glsl */`
+          varying vec2 vWorldXZ;
+          void main() {
+            vec4 wp = modelMatrix * vec4(position, 1.0);
+            vWorldXZ = wp.xz;
+            gl_Position = projectionMatrix * viewMatrix * wp;
+          }
+        `,
+        fragmentShader: /* glsl */`
+          varying vec2 vWorldXZ;
+          uniform float uTime, uScroll;
+          uniform vec3 uColorA, uColorB, uFog;
+
+          // anti-aliased grid line
+          float gridLine(vec2 p, float spacing, float thickness) {
+            vec2 g = abs(fract(p / spacing - 0.5) - 0.5) / fwidth(p / spacing);
+            float line = min(g.x, g.y);
+            return 1.0 - smoothstep(0.0, thickness, line);
+          }
+
+          void main() {
+            // scroll the grid forward over time
+            vec2 p = vWorldXZ;
+            p.y += uScroll;        // negative camera-Z is "forward"
+
+            float fine = gridLine(p, 2.0, 1.6);
+            float major = gridLine(p, 20.0, 1.8);
+
+            // distance fade — lines vanish into the haze
+            float dist = length(vWorldXZ);
+            float fade = 1.0 - smoothstep(80.0, 480.0, dist);
+
+            // hue blend by distance: near = magenta, far = cyan
+            vec3 col = mix(uColorB, uColorA, smoothstep(0.0, 220.0, dist));
+
+            float a = (fine * 0.55 + major * 1.0) * fade;
+            a = clamp(a, 0.0, 1.0);
+
+            // soft pulse along forward direction
+            float pulse = 0.85 + 0.15 * sin(uTime * 1.6 - dist * 0.03);
+            col *= pulse;
+
+            gl_FragColor = vec4(col, a);
+          }
+        `
+      });
+
+      const grid = new THREE.Mesh(geo, mat);
+      grid.position.y = -0.05;
+      scene.add(grid);
+      window.__gridMat = mat;
+    }
+
+    /* ---------- the WIREFRAME TERRAIN (displaced via 3D noise in vertex shader) ---------- */
+    {
+      const W = 480, H = 480, SEG = 160;
+      const geo = new THREE.PlaneGeometry(W, H, SEG, SEG);
+      geo.rotateX(-Math.PI / 2);
+
+      const mat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        wireframe: true,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          uTime:   { value: 0 },
+          uScroll: { value: 0 },
+          uAmp:    { value: 5.5 },
+          uColorLow:  { value: new THREE.Color('#ff2bd6') },
+          uColorHigh: { value: new THREE.Color('#05f0ff') },
+          uColorCore: { value: new THREE.Color('#ffffff') }
+        },
+        vertexShader: /* glsl */`
+          uniform float uTime, uScroll, uAmp;
+          varying float vH;
+          varying vec3  vWorld;
+
+          // ---- simplex 3d noise (Ashima Arts, public domain) ----
+          vec3 mod289(vec3 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
+          vec4 mod289(vec4 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
+          vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }
+          vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314 * r; }
+          float snoise(vec3 v){
+            const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+            const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+            vec3 i  = floor(v + dot(v, C.yyy));
+            vec3 x0 = v - i + dot(i, C.xxx);
+            vec3 g  = step(x0.yzx, x0.xyz);
+            vec3 l  = 1.0 - g;
+            vec3 i1 = min(g.xyz, l.zxy);
+            vec3 i2 = max(g.xyz, l.zxy);
+            vec3 x1 = x0 - i1 + C.xxx;
+            vec3 x2 = x0 - i2 + C.yyy;
+            vec3 x3 = x0 - D.yyy;
+            i = mod289(i);
+            vec4 p = permute(permute(permute(
+                       i.z + vec4(0.0, i1.z, i2.z, 1.0))
+                     + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+                     + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+            float n_ = 0.142857142857;
+            vec3 ns = n_ * D.wyz - D.xzx;
+            vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+            vec4 x_ = floor(j * ns.z);
+            vec4 y_ = floor(j - 7.0 * x_);
+            vec4 x = x_ * ns.x + ns.yyyy;
+            vec4 y = y_ * ns.x + ns.yyyy;
+            vec4 h = 1.0 - abs(x) - abs(y);
+            vec4 b0 = vec4(x.xy, y.xy);
+            vec4 b1 = vec4(x.zw, y.zw);
+            vec4 s0 = floor(b0)*2.0 + 1.0;
+            vec4 s1 = floor(b1)*2.0 + 1.0;
+            vec4 sh = -step(h, vec4(0.0));
+            vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+            vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+            vec3 p0 = vec3(a0.xy, h.x);
+            vec3 p1 = vec3(a0.zw, h.y);
+            vec3 p2 = vec3(a1.xy, h.z);
+            vec3 p3 = vec3(a1.zw, h.w);
+            vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+            p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+            vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+            m = m * m;
+            return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+          }
+          // ---- end simplex ----
+
+          float terrainHeight(vec2 xz) {
+            // 3 octaves of noise, animated in time (the "dancing")
+            float t = uTime * 0.18;
+            float h  = snoise(vec3(xz.x * 0.018, xz.y * 0.018, t))             * 1.00;
+            h += snoise(vec3(xz.x * 0.045, xz.y * 0.045 + 13.7, t * 1.6 + 4.2)) * 0.45;
+            h += snoise(vec3(xz.x * 0.11,  xz.y * 0.11  + 27.3, t * 2.3 + 9.0)) * 0.18;
+            // scroll: as uScroll grows, the apparent noise field shifts
+            h += snoise(vec3(xz.x * 0.025, xz.y * 0.025 - uScroll * 0.025, t * 0.9)) * 0.35;
+            return h;
+          }
+
+          void main() {
+            vec3 p = position;
+            float h = terrainHeight(p.xz) * uAmp;
+            p.y += h;
+            vH = h;
+            vec4 wp = modelMatrix * vec4(p, 1.0);
+            vWorld = wp.xyz;
+            gl_Position = projectionMatrix * viewMatrix * wp;
+          }
+        `,
+        fragmentShader: /* glsl */`
+          varying float vH;
+          varying vec3 vWorld;
+          uniform vec3 uColorLow, uColorHigh, uColorCore;
+          uniform float uTime;
+
+          void main() {
+            // height-based gradient
+            float t = clamp(vH / 6.0 * 0.5 + 0.5, 0.0, 1.0);
+            vec3 col = mix(uColorLow, uColorHigh, smoothstep(0.0, 1.0, t));
+
+            // highlight the peaks with white core
+            float peak = smoothstep(4.5, 7.5, vH);
+            col = mix(col, uColorCore, peak * 0.55);
+
+            // distance fade
+            float dist = length(vWorld.xz);
+            float fade = 1.0 - smoothstep(120.0, 380.0, dist);
+            float a = fade * 0.95;
+
+            // pulse for the dancing feeling
+            float pulse = 0.85 + 0.15 * sin(uTime * 1.4 + vH * 0.6);
+            col *= pulse;
+
+            gl_FragColor = vec4(col, a);
+          }
+        `
+      });
+
+      const terrain = new THREE.Mesh(geo, mat);
+      terrain.position.y = -0.4;
+      scene.add(terrain);
+      window.__terrainMat = mat;
+    }
+
+    /* ---------- animation loop (direct render — no postprocessing) ---------- */
+    const clock = new THREE.Clock();
+    let scroll = 0;
+    const BASE_SPEED = 6.0;          // base world units per second the terrain scrolls
+    const SUN_DESCENT = 0.32;        // sun descends slowly (world units / sec)
+    const SUN_BASE_Y = 26;
+    const SUN_FLOOR  = 6;
+    const offEl = document.getElementById('off');
+    const velEl = document.getElementById('vel');
+    const mulEl = document.getElementById('mul');
+    const chipPal = document.getElementById('chip-pal');
+    const chipSt  = document.getElementById('chip-st');
+    const chipFs  = document.getElementById('chip-fs');
+    const ctrls   = document.getElementById('ctrls');
+
+    /* ===================== PALETTES ===================== */
+    const PALETTES = [
+      {
+        name: 'CLASSIC',
+        skyTop:'#08001c', skyMid:'#2a0a4a', skyHorizon:'#5e1654', skySunGlow:'#ff3a7a',
+        halo1:'#ff2a6d', halo2:'#ff9a3c',
+        sunCore:'#fff3a3', sunMid:'#ff8a3c', sunEdge:'#d61d4f',
+        strip:'#ff3a5e',
+        gridA:'#ff2bd6', gridB:'#05f0ff',
+        terLow:'#ff2bd6', terHigh:'#05f0ff', terCore:'#ffffff',
+        fog:'#1a0628'
+      },
+      {
+        name: 'OUTRUN',
+        skyTop:'#020010', skyMid:'#1a0438', skyHorizon:'#481038', skySunGlow:'#ff5530',
+        halo1:'#ff3030', halo2:'#ffaa00',
+        sunCore:'#ffff70', sunMid:'#ff7010', sunEdge:'#cc0044',
+        strip:'#ff5028',
+        gridA:'#ff2060', gridB:'#ff9020',
+        terLow:'#ff3060', terHigh:'#ffaa30', terCore:'#ffeebb',
+        fog:'#3a0820'
+      },
+      {
+        name: 'VAPORWAVE',
+        skyTop:'#0c0428', skyMid:'#2a1858', skyHorizon:'#7050a0', skySunGlow:'#ff90c0',
+        halo1:'#ff80c0', halo2:'#ffe0d0',
+        sunCore:'#ffe0f0', sunMid:'#ff90b0', sunEdge:'#a070d0',
+        strip:'#ffa0d0',
+        gridA:'#ff80c0', gridB:'#80f0e0',
+        terLow:'#ff80c0', terHigh:'#80f0e0', terCore:'#ffffff',
+        fog:'#20082c'
+      }
+    ];
+
+    // runtime mutable palette state (lerps toward target each frame)
+    const palState = {
+      idx: 0,
+      // current uniform-value-objects (THREE.Color) — we mutate .copy() in place
+      cur: {
+        skyTop: window.__skyMat?.uniforms.uTop.value,
+        skyMid: window.__skyMat?.uniforms.uMid.value,
+        skyHorizon: window.__skyMat?.uniforms.uHorizon.value,
+        skySunGlow: window.__skyMat?.uniforms.uSunGlow.value,
+        halo1: window.__halo1Mat?.uniforms.uColor.value,
+        halo2: window.__halo2Mat?.uniforms.uColor.value,
+        sunCore: window.__sunDiscMat?.uniforms.uCore.value,
+        sunMid:  window.__sunDiscMat?.uniforms.uMid.value,
+        sunEdge: window.__sunDiscMat?.uniforms.uEdge.value,
+        strip:   window.__stripMat?.uniforms.uCol.value,
+        gridA:   window.__gridMat?.uniforms.uColorA.value,
+        gridB:   window.__gridMat?.uniforms.uColorB.value,
+        gridFog: window.__gridMat?.uniforms.uFog.value,
+        terLow:  window.__terrainMat?.uniforms.uColorLow.value,
+        terHigh: window.__terrainMat?.uniforms.uColorHigh.value,
+        terCore: window.__terrainMat?.uniforms.uColorCore.value,
+        fog:     null
+      }
+    };
+    // scene fog uses a global THREE.Color — keep it synced
+    palState.cur.fog = scene.fog.color;
+
+    function applyPaletteImmediate(idx) {
+      const p = PALETTES[idx];
+      for (const k of Object.keys(p)) {
+        if (k === 'name') continue;
+        if (palState.cur[k]) palState.cur[k].set(p[k]);
+      }
+      scene.fog.color.copy(palState.cur.fog);
+      chipPal.textContent = 'PAL · ' + p.name;
+    }
+
+    function setPalette(idx) {
+      idx = ((idx % PALETTES.length) + PALETTES.length) % PALETTES.length;
+      palState.idx = idx;
+      // snap immediately for clarity; lerp would be smoother but palette swap is meant to be snappy
+      applyPaletteImmediate(idx);
+    }
+
+    /* ===================== INPUT STATE ===================== */
+    const input = {
+      keys: Object.create(null),
+      mouseNX: 0, mouseNY: 0,       // normalised [-1..1]
+      parallaxX: 0, parallaxY: 0,   // smoothed
+      targetMul: 1.0,
+      mul: 1.0,                     // current speed multiplier
+      steerTarget: 0,
+      steer: 0,                     // current lateral offset (world units)
+      paused: false
+    };
+
+    // map e.code → input key (so movement works regardless of IME / keyboard layout)
+    const CODE_TO_KEY = {
+      'KeyW':'w','KeyA':'a','KeyS':'s','KeyD':'d',
+      'ArrowUp':'arrowup','ArrowDown':'arrowdown','ArrowLeft':'arrowleft','ArrowRight':'arrowright'
+    };
+    window.addEventListener('keydown', (e) => {
+      // physical key for movement (IME-safe)
+      if (CODE_TO_KEY[e.code]) input.keys[CODE_TO_KEY[e.code]] = true;
+      // logical key for discrete actions (still IME-affected, but keys are physical keys here)
+      const k = e.key.toLowerCase();
+      input.keys[k] = true;
+      if (e.code === 'Space' || k === ' ' || k === 'spacebar') {
+        input.paused = !input.paused;
+        chipSt.textContent = input.paused ? 'PAUSED' : 'RUN';
+        chipSt.classList.toggle('warn', input.paused);
+        e.preventDefault();
+      } else if (e.code === 'Digit1' || k === '1') setPalette(0);
+      else if (e.code === 'Digit2' || k === '2') setPalette(1);
+      else if (e.code === 'Digit3' || k === '3') setPalette(2);
+      else if (e.code === 'KeyR' || k === 'r') {
+        input.targetMul = 1.0; input.steerTarget = 0; input.paused = false;
+        chipSt.textContent = 'RUN'; chipSt.classList.remove('warn');
+        setPalette(0);
+      } else if (e.code === 'KeyF' || e.code === 'F11' || k === 'f') { toggleFullscreen(); e.preventDefault(); }
+      else if (e.code === 'KeyP' || k === 'p') { takeScreenshot(); }
+      else if (e.code === 'KeyH' || k === 'h') { toggleHelp(); }
+    }, { passive: false });
+    window.addEventListener('keyup', (e) => {
+      if (CODE_TO_KEY[e.code]) input.keys[CODE_TO_KEY[e.code]] = false;
+      input.keys[e.key.toLowerCase()] = false;
+    });
+    window.addEventListener('blur', () => { input.keys = Object.create(null); });
+
+    window.addEventListener('mousemove', (e) => {
+      input.mouseNX = (e.clientX / window.innerWidth)  * 2 - 1;
+      input.mouseNY = (e.clientY / window.innerHeight) * 2 - 1;
+    });
+    // touch parallax
+    window.addEventListener('touchmove', (e) => {
+      if (!e.touches[0]) return;
+      input.mouseNX = (e.touches[0].clientX / window.innerWidth)  * 2 - 1;
+      input.mouseNY = (e.touches[0].clientY / window.innerHeight) * 2 - 1;
+    }, { passive: true });
+
+    /* ===================== ACTIONS ===================== */
+    function toggleFullscreen() {
+      const el = document.documentElement;
+      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (!isFs) {
+        (el.requestFullscreen || el.webkitRequestFullscreen || (()=>{})).call(el);
+        chipFs.textContent = 'FS · ON'; chipFs.classList.add('on');
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen || (()=>{})).call(document);
+        chipFs.textContent = 'FS · OFF'; chipFs.classList.remove('on');
+      }
+    }
+
+    function takeScreenshot() {
+      try {
+        const c = document.querySelector('canvas');
+        const url = c.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'synthwave-' + Date.now() + '.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        chipPal.textContent = 'SHOT · SAVED';
+        setTimeout(() => { chipPal.textContent = 'PAL · ' + PALETTES[palState.idx].name; }, 900);
+      } catch (e) { console.error('[synthwave] screenshot failed:', e); }
+    }
+
+    let helpVisible = true;
+    function toggleHelp() {
+      helpVisible = !helpVisible;
+      ctrls.classList.toggle('hidden', !helpVisible);
+    }
+
+    /* ===================== TICK ===================== */
+    function tick() {
+      try {
+        const rawDt = Math.min(clock.getDelta(), 1/30);
+        const dt = input.paused ? 0 : rawDt;
+        const t  = clock.elapsedTime;
+
+        // --- input → targets ---
+        const k = input.keys;
+        if (k['w'] || k['arrowup'])   input.targetMul = Math.min(2.5, input.targetMul + rawDt * 1.8);
+        if (k['s'] || k['arrowdown']) input.targetMul = Math.max(0.25, input.targetMul - rawDt * 1.8);
+        input.steerTarget = ((k['a'] || k['arrowleft']) ? -1 : 0) + ((k['d'] || k['arrowright']) ? 1 : 0);
+
+        // smooth toward targets
+        const lerp = 1 - Math.pow(0.001, rawDt || 1/60); // ~ critically-damped feel
+        input.mul     += (input.targetMul - input.mul) * lerp;
+        input.steer   += (input.steerTarget - input.steer) * lerp;
+        input.parallaxX += (input.mouseNX - input.parallaxX) * lerp * 0.8;
+        input.parallaxY += (input.mouseNY - input.parallaxY) * lerp * 0.8;
+
+        scroll += BASE_SPEED * input.mul * dt;
+
+        const sunY = Math.max(SUN_FLOOR, SUN_BASE_Y - t * SUN_DESCENT);
+        sunGroup.position.y = sunY - SUN_BASE_Y;
+
+        if (window.__terrainMat) {
+          window.__terrainMat.uniforms.uTime.value   = t;
+          window.__terrainMat.uniforms.uScroll.value = scroll;
+        }
+        if (window.__gridMat) {
+          window.__gridMat.uniforms.uTime.value   = t;
+          window.__gridMat.uniforms.uScroll.value = scroll;
+        }
+        if (window.__stars)     window.__stars.userData.mat.uniforms.uTime.value = t;
+        if (window.__sunDiscMat) window.__sunDiscMat.uniforms.uTime.value = t;
+
+        // camera — combine ambient drift + parallax + steer
+        const ambientX = Math.sin(t * 0.4) * 0.4;
+        const ambientY = Math.sin(t * 0.7) * 0.18;
+        const steerX   = input.steer * 6.0;
+        const lookX    = input.parallaxX * 2.5;
+        const lookY    = 7 + input.parallaxY * 1.2 + Math.sin(t * 0.5) * 0.2;
+        camera.position.x = ambientX + steerX;
+        camera.position.y = 9.0 + ambientY - input.parallaxY * 0.6;
+        camera.lookAt(lookX, lookY, 0);
+
+        if (offEl) offEl.textContent = scroll.toFixed(0).padStart(5, '0');
+        const vel = (22 + Math.sin(t * 1.3) * 1.5) * input.mul;
+        if (velEl) velEl.textContent = vel.toFixed(1).padStart(5, '0');
+        if (mulEl) mulEl.textContent = input.mul.toFixed(2);
+
+        renderer.render(scene, camera);
+      } catch (e) {
+        console.error('[synthwave] tick failed:', e);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    /* ---------- resize ---------- */
+    function onResize() {
+      const w = window.innerWidth, h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+    }
+    window.addEventListener('resize', onResize);
+
+    /* ---------- boot ---------- */
+    let bootHidden = false;
+    function hideBoot() {
+      if (bootHidden) return;
+      bootHidden = true;
+      const b = document.getElementById('boot');
+      if (b && b.parentNode) b.parentNode.removeChild(b);
+    }
+    window.__hideBoot = hideBoot;
+
+    // warm up — render one frame before fading splash
+    try { renderer.render(scene, camera); } catch (e) { console.error('[synthwave] warmup render failed:', e); }
+    requestAnimationFrame(function () {
+      hideBoot();
+      tick();
+    });
+  })();
+  </script>
+
+  <!-- Outer classic-script safety net: even if the module never loads,
+       the CSS animation below will fade the boot screen automatically. -->
+  <script>
+    (function () {
+      // Fast-path: once the module exposes hideBoot, use it.
+      var tries = 0;
+      var t = setInterval(function () {
+        tries++;
+        if (window.__hideBoot) { window.__hideBoot(); clearInterval(t); return; }
+        if (tries > 20) clearInterval(t); // stop polling after 2s; CSS animation takes over
+      }, 100);
+    })();
+  </script>
+</body>
+</html>
