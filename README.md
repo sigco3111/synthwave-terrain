@@ -8,7 +8,7 @@
 
 ## 🎬 라이브 데모 (Live Demo)
 
-> **👉 [https://synthwave-terrain.vercel.app/](https://synthwave-terrain.vercel.app/)** — 브라우저에서 바로 실행 (60fps)
+> **👉 [https://sigco3111.github.io/synthwave-terrain/](https://sigco3111.github.io/synthwave-terrain/)** — 브라우저에서 바로 실행 (60fps)
 
 | | |
 |---|---|
@@ -91,7 +91,7 @@ python3 -m http.server 8000
 
 ### 방법 2: 라이브 데모
 별도 설치 없이 바로 확인:
-👉 **https://synthwave-terrain.vercel.app/**
+👉 **https://sigco3111.github.io/synthwave-terrain/**
 
 ---
 
@@ -237,7 +237,7 @@ python3 -m http.server 8000
 # → http://localhost:8000
 ```
 
-Or just open the live demo: **https://synthwave-terrain.vercel.app/**
+Or just open the live demo: **https://sigco3111.github.io/synthwave-terrain/**
 
 ### Stack
 
