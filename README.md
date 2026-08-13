@@ -12,7 +12,7 @@
 
 | | |
 |---|---|
-| ![Demo](https://img.shields.io/badge/Live-Demo-7C3AED?style=for-the-badge&logo=vercel&logoColor=white) | [![Repo](https://img.shields.io/badge/GitHub-sigco3111%2Fsynthwave--terrain-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sigco3111/synthwave-terrain) |
+| ![Demo](https://img.shields.io/badge/Live-Demo-222222?style=for-the-badge&logo=githubpages&logoColor=white) | [![Repo](https://img.shields.io/badge/GitHub-sigco3111%2Fsynthwave--terrain-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sigco3111/synthwave-terrain) |
 | ![Status](https://img.shields.io/badge/Status-Live-22C55E?style=flat-square) | ![Stack](https://img.shields.io/badge/Stack-Three.js_r160-000000?style=flat-square&logo=three.js&logoColor=white) |
 | ![License](https://img.shields.io/badge/License-MIT-F1C40F?style=flat-square) | ![Deps](https://img.shields.io/badge/Dependencies-0-9CA3AF?style=flat-square) |
 
@@ -164,7 +164,7 @@ const CONFIG = {
 - [x] **v0.2** — 네온 그리드 셰이더 + Bloom 포스트 프로세싱
 - [x] **v0.3** — 거대한 레트로 태양 + 자동 일몰
 - [x] **v0.4** — 미스트 입자 + 시점 시차 + UI 폴리시
-- [x] **v1.0** — Vercel 배포 + 라이브 데모 + README 다층 구조화 ✅
+- [x] **v1.0** — GitHub Pages 배포 + 라이브 데모 + README 다층 구조화 ✅
 - [ ] **v1.1 (예정)** — 오디오 리액티브 (마이크 → 비행 속도 / 노이즈 진폭)
 - [ ] **v2.0 (예정)** — WebXR 모드 (`VREntry` 진입으로 immersive 비행)
 
@@ -254,7 +254,7 @@ Or just open the live demo: **https://sigco3111.github.io/synthwave-terrain/**
 - [x] **v0.2** — Neon-grid shader + bloom post-processing
 - [x] **v0.3** — Giant retro sun + auto-sunset
 - [x] **v0.4** — Mist particles + parallax + UI polish
-- [x] **v1.0** — Vercel deploy + live demo + multi-layer README
+- [x] **v1.0** — GitHub Pages deploy + live demo + multi-layer README
 - [ ] **v1.1 (planned)** — Audio-reactive (mic → flight speed / noise amplitude)
 - [ ] **v2.0 (planned)** — WebXR mode (immersive flight via `VREntry`)
 
